@@ -22,18 +22,16 @@ def handle_hello():
     return jsonify(response_body), 200
 
 @api.route('/signup', methods=['POST'])
-def signup():
-    if request.method == 'POST':
-        email = request.json.get('email')
-        password = request.json.get('password')
+def handle_signup():
+    request_body_user = request.get_json()
+    print(request_body_user)
+    user = User.query.filter_by(email=request_body_user["email"], password=request_body_user["password"]).first()
+    #print(user)
+    if user:
+        return jsonify({"message": "Email and password already exist"})
+    new_user = User(email=request_body_user["email"], password=request_body_user["password"])
+    print(new_user)
+    db.session.add(new_user)
+    db.session.commit()
 
-        # Verificar si el correo ya está registrado
-        if User.query.filter_by(email=email).first():
-            return jsonify({'message': 'El correo ya está registrado'}), 400
-
-        # Crear un nuevo usuario
-        new_user = User(email=email, password=password)
-        db.session.add(new_user)
-        db.session.commit()
-
-        return jsonify({'message': 'Usuario registrado exitosamente'}), 200
+    return jsonify({"message": "New user added"}), 200 
