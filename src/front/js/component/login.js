@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; 
 
-export const Signup = () => {
+export const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -11,23 +11,25 @@ export const Signup = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("https://expert-zebra-pjrrrvj9r4wvc6qgg-3001.app.github.dev/api/signup", {
+      const response = await fetch("https://expert-zebra-pjrrrvj9r4wvc6qgg-3001.app.github.dev/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`
         },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
       if (response.ok) {
+        // Guardar el token en sessionStorage (si lo hubiera)
         if (data.access_token) {
           sessionStorage.setItem("token", data.access_token);
         }
-        setMessage("Usuario registrado exitosamente");
-        navigate("/login");
+        setMessage("Inicio de sesión exitoso");
+        navigate("/privated"); 
       } else {
-        setMessage("Error al registrar usuario");
+        setMessage("Error al iniciar sesión. Verifica tus credenciales.");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -37,7 +39,7 @@ export const Signup = () => {
 
   return (
     <div>
-      <h2>Signup</h2>
+      <h2>Login</h2>
       <form onSubmit={handleSubmit}>
         <div>
           <label>Email:</label>
@@ -47,7 +49,7 @@ export const Signup = () => {
           <label>Password:</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
-        <button type="submit">Registrarse</button>
+        <button type="submit">Iniciar sesión</button>
       </form>
       {message && <p>{message}</p>}
     </div>

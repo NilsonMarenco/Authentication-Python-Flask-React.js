@@ -2,6 +2,10 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+
 from api.models import db, User
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
@@ -11,27 +15,44 @@ api = Blueprint('api', __name__)
 # Allow CORS requests to this API
 CORS(api)
 
-
-@api.route('/hello', methods=['POST', 'GET'])
-def handle_hello():
-
-    response_body = {
-        "message": "Hello! I'm a message that came from the backend, check the network tab on the google inspector and you will see the GET request"
-    }
-
-    return jsonify(response_body), 200
-
 @api.route('/signup', methods=['POST'])
 def handle_signup():
     request_body_user = request.get_json()
-    print(request_body_user)
-    user = User.query.filter_by(email=request_body_user["email"], password=request_body_user["password"]).first()
-    #print(user)
+    if not request_body_user or 'email' not in request_body_user or 'password' not in request_body_user:
+        return jsonify({"message": "Invalid request. Email and password are required."}), 400
+
+    user = User.query.filter_by(email=request_body_user["email"]).first()
     if user:
-        return jsonify({"message": "Email and password already exist"})
-    new_user = User(email=request_body_user["email"], password=request_body_user["password"])
-    print(new_user)
+        return jsonify({"message": "Email already exists"}), 400
+
+    new_user = User(email=request_body_user["email"], password=request_body_user["password"], is_active=True)
     db.session.add(new_user)
     db.session.commit()
+  
+    access_token = create_access_token(identity=request_body_user["email"])
 
-    return jsonify({"message": "New user added"}), 200 
+    return jsonify({"message": "New user added", "access_token": access_token}), 200
+
+@api.route("/login", methods=["POST"])
+def login():
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+
+    if not email or not password:
+        return jsonify({"message": "Both email and password are required."}), 400
+
+    user = User.query.filter_by(email=email, password=password).first()
+    if not user:
+        return jsonify({"message": "Invalid email or password."}), 401
+
+    access_token = create_access_token(identity=email)
+
+    return jsonify({"access_token": access_token}), 200
+
+
+@api.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
